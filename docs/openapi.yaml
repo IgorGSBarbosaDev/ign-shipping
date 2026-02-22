@@ -1,0 +1,1562 @@
+openapi: 3.0.3
+info:
+  title: IGN Shipping API
+  description: Plataforma SaaS de gestão de importações
+  version: 2.0.0
+
+servers:
+  - url: http://localhost:8080/api
+    description: Desenvolvimento local
+
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+
+  responses:
+    NotFound:
+      description: Recurso não encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ValidationError:
+      description: Erro de validação
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+    Unauthorized:
+      description: Token inválido ou ausente
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Sem permissão para este recurso
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    LimitExceeded:
+      description: Limite do plano atingido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+
+    # ── ENUMS ────────────────────────────────────────────────────
+    Role:
+      type: string
+      enum: [VENDEDOR, COMPRADOR, ADMIN]
+
+    Categoria:
+      type: string
+      enum: [CAMISA, TENIS, ELETRONICO, OUTROS]
+
+    StatusPacote:
+      type: string
+      enum: [RASCUNHO, AGUARDANDO_ENVIO, EM_VIAGEM, ALFANDEGA, TRANSITO, ENTREGUE, FINALIZADO]
+
+    TipoEnvio:
+      type: string
+      enum: [EXPRESSA, ECONOMICA]
+
+    NomePlano:
+      type: string
+      enum: [GRATUITO, BASICO, PRO, ENTERPRISE]
+
+    StatusPagamento:
+      type: string
+      enum: [PENDENTE, PAGO, PARCIAL]
+
+    # ── AUTH ─────────────────────────────────────────────────────
+    LoginRequest:
+      type: object
+      required: [email, senha]
+      properties:
+        email:
+          type: string
+          format: email
+        senha:
+          type: string
+          minLength: 8
+
+    LoginResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+          default: Bearer
+        expiresIn:
+          type: integer
+          description: Segundos até expirar
+        usuario:
+          $ref: '#/components/schemas/UsuarioResumoResponse'
+
+    CadastroVendedorRequest:
+      type: object
+      required: [nome, email, senha]
+      properties:
+        nome:
+          type: string
+          minLength: 2
+          maxLength: 100
+        email:
+          type: string
+          format: email
+        senha:
+          type: string
+          minLength: 8
+          description: "Mín 8 chars, 1 maiúscula, 1 número, 1 especial"
+
+    CadastroCompradorRequest:
+      type: object
+      required: [nome, email, senha, codigoConvite]
+      properties:
+        nome:
+          type: string
+          minLength: 2
+          maxLength: 100
+        email:
+          type: string
+          format: email
+        senha:
+          type: string
+          minLength: 8
+        telefone:
+          type: string
+        codigoConvite:
+          type: string
+          description: Código gerado pelo vendedor
+
+    RecuperarSenhaRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+
+    RedefinirSenhaRequest:
+      type: object
+      required: [token, novaSenha]
+      properties:
+        token:
+          type: string
+        novaSenha:
+          type: string
+          minLength: 8
+
+    # ── USUÁRIO ──────────────────────────────────────────────────
+    UsuarioResumoResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        nome:
+          type: string
+        email:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+        tenantId:
+          type: integer
+          format: int64
+          nullable: true
+
+    # ── PLANO ────────────────────────────────────────────────────
+    PlanoResponse:
+      type: object
+      properties:
+        nome:
+          $ref: '#/components/schemas/NomePlano'
+        maxPacotesMes:
+          type: integer
+          nullable: true
+          description: null = ilimitado
+        maxCompradores:
+          type: integer
+          nullable: true
+        maxProdutos:
+          type: integer
+          nullable: true
+        portalCompradorIncluido:
+          type: boolean
+        exportacaoIncluida:
+          type: boolean
+        precoMensalBrl:
+          type: number
+          format: double
+
+    UsoPlanoPorcentagem:
+      type: object
+      properties:
+        pacotesMesUsados:
+          type: integer
+        pacotesMesLimite:
+          type: integer
+          nullable: true
+        compradoresUsados:
+          type: integer
+        compradoresLimite:
+          type: integer
+          nullable: true
+        produtosUsados:
+          type: integer
+        produtosLimite:
+          type: integer
+          nullable: true
+
+    # ── COMPRADOR (cliente do vendedor) ──────────────────────────
+    CompradorRequest:
+      type: object
+      required: [nome]
+      properties:
+        nome:
+          type: string
+          minLength: 2
+          maxLength: 100
+        email:
+          type: string
+          format: email
+        telefone:
+          type: string
+          maxLength: 20
+
+    CompradorResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        nome:
+          type: string
+        email:
+          type: string
+        telefone:
+          type: string
+        totalPedidos:
+          type: integer
+        totalGastoBrl:
+          type: number
+          format: double
+        totalPendenteBrl:
+          type: number
+          format: double
+        lucroGeradoBrl:
+          type: number
+          format: double
+        codigoConvitePortal:
+          type: string
+          description: Código para o comprador se cadastrar no portal
+
+    # ── PRODUTO ──────────────────────────────────────────────────
+    ProdutoRequest:
+      type: object
+      required: [nome, categoria, custoYuan, pesoGramas]
+      properties:
+        nome:
+          type: string
+          minLength: 2
+          maxLength: 150
+        categoria:
+          $ref: '#/components/schemas/Categoria'
+        custoYuan:
+          type: number
+          format: double
+          minimum: 0.01
+        freteVendedorYuan:
+          type: number
+          format: double
+          minimum: 0
+          default: 0
+        pesoGramas:
+          type: integer
+          minimum: 1
+        descricao:
+          type: string
+          maxLength: 500
+        fotoUrl:
+          type: string
+          description: URL da foto após upload
+
+    ProdutoResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        nome:
+          type: string
+        categoria:
+          $ref: '#/components/schemas/Categoria'
+        custoYuan:
+          type: number
+          format: double
+        freteVendedorYuan:
+          type: number
+          format: double
+        pesoGramas:
+          type: integer
+        descricao:
+          type: string
+        fotoUrl:
+          type: string
+          nullable: true
+
+    # ── PACOTE ────────────────────────────────────────────────────
+    PacoteRequest:
+      type: object
+      required: [nome]
+      properties:
+        nome:
+          type: string
+          minLength: 2
+          maxLength: 150
+        tipoEnvio:
+          $ref: '#/components/schemas/TipoEnvio'
+        cambio:
+          type: number
+          format: double
+          minimum: 0.001
+        taxaAlfandegariaBrl:
+          type: number
+          format: double
+          minimum: 0
+          default: 0
+        dataEnvio:
+          type: string
+          format: date
+        observacoes:
+          type: string
+
+    PacoteResumoResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        nome:
+          type: string
+        status:
+          $ref: '#/components/schemas/StatusPacote'
+        tipoEnvio:
+          $ref: '#/components/schemas/TipoEnvio'
+        pesoTotalGramas:
+          type: integer
+        custoTotalBrl:
+          type: number
+          format: double
+        receitaTotalBrl:
+          type: number
+          format: double
+        margemPercentual:
+          type: number
+          format: double
+        totalCompradores:
+          type: integer
+        totalItens:
+          type: integer
+        cambio:
+          type: number
+          format: double
+        dataCriacao:
+          type: string
+          format: date-time
+        dataEnvio:
+          type: string
+          format: date
+
+    PacoteDetalheResponse:
+      allOf:
+        - $ref: '#/components/schemas/PacoteResumoResponse'
+        - type: object
+          properties:
+            taxaCssbuyYuan:
+              type: number
+              format: double
+            freteInternacionalYuan:
+              type: number
+              format: double
+            freteInternacionalBrl:
+              type: number
+              format: double
+            taxaAlfandegariaBrl:
+              type: number
+              format: double
+            itensPorComprador:
+              type: array
+              items:
+                $ref: '#/components/schemas/ItensPorCompradorResponse'
+            observacoes:
+              type: string
+
+    AtualizarStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: '#/components/schemas/StatusPacote'
+
+    # ── ITENS ─────────────────────────────────────────────────────
+    OrderItemRequest:
+      type: object
+      required: [compradorId, produtoId, precoVendaBrl]
+      properties:
+        compradorId:
+          type: integer
+          format: int64
+        produtoId:
+          type: integer
+          format: int64
+        quantidade:
+          type: integer
+          minimum: 1
+          default: 1
+        precoVendaBrl:
+          type: number
+          format: double
+          minimum: 0.01
+        statusPagamento:
+          $ref: '#/components/schemas/StatusPagamento'
+
+    OrderItemUpdateRequest:
+      type: object
+      properties:
+        quantidade:
+          type: integer
+          minimum: 1
+        precoVendaBrl:
+          type: number
+          format: double
+          minimum: 0.01
+        statusPagamento:
+          $ref: '#/components/schemas/StatusPagamento'
+
+    OrderItemResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        compradorId:
+          type: integer
+          format: int64
+        compradorNome:
+          type: string
+        produto:
+          $ref: '#/components/schemas/ProdutoResponse'
+        quantidade:
+          type: integer
+        precoVendaBrl:
+          type: number
+          format: double
+        custoRateadoBrl:
+          type: number
+          format: double
+        lucroItemBrl:
+          type: number
+          format: double
+        proporcaoPeso:
+          type: number
+          format: double
+        statusPagamento:
+          $ref: '#/components/schemas/StatusPagamento'
+
+    ItensPorCompradorResponse:
+      type: object
+      properties:
+        compradorId:
+          type: integer
+          format: int64
+        compradorNome:
+          type: string
+        totalItens:
+          type: integer
+        pesoTotalGramas:
+          type: integer
+        subtotalCustoBrl:
+          type: number
+          format: double
+        subtotalVendaBrl:
+          type: number
+          format: double
+        lucroBrl:
+          type: number
+          format: double
+        margemPercentual:
+          type: number
+          format: double
+        totalPendenteBrl:
+          type: number
+          format: double
+        itens:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemResponse'
+
+    # ── PORTAL DO COMPRADOR ───────────────────────────────────────
+    MeusPedidosResponse:
+      type: object
+      properties:
+        totalPedidos:
+          type: integer
+        totalPagoBrl:
+          type: number
+          format: double
+        totalPendenteBrl:
+          type: number
+          format: double
+        pedidos:
+          type: array
+          items:
+            $ref: '#/components/schemas/PedidoCompradorResponse'
+
+    PedidoCompradorResponse:
+      type: object
+      properties:
+        itemId:
+          type: integer
+          format: int64
+        produto:
+          $ref: '#/components/schemas/ProdutoResponse'
+        quantidade:
+          type: integer
+        precoVendaBrl:
+          type: number
+          format: double
+        statusPacote:
+          $ref: '#/components/schemas/StatusPacote'
+        statusPagamento:
+          $ref: '#/components/schemas/StatusPagamento'
+        dataPacote:
+          type: string
+          format: date-time
+        nomeVendedor:
+          type: string
+
+    # ── RESUMO FINANCEIRO ─────────────────────────────────────────
+    ResumoFinanceiroResponse:
+      type: object
+      properties:
+        pacoteId:
+          type: integer
+          format: int64
+        cambioUtilizado:
+          type: number
+          format: double
+        custoTotalYuan:
+          type: number
+          format: double
+        custoTotalBrl:
+          type: number
+          format: double
+        receitaTotalBrl:
+          type: number
+          format: double
+        lucroBrl:
+          type: number
+          format: double
+        margemPercentual:
+          type: number
+          format: double
+        freteInternacionalYuan:
+          type: number
+          format: double
+        freteInternacionalBrl:
+          type: number
+          format: double
+        taxaCssbuyYuan:
+          type: number
+          format: double
+        taxaCssbuyBrl:
+          type: number
+          format: double
+        taxaAlfandegariaBrl:
+          type: number
+          format: double
+        compradores:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItensPorCompradorResponse'
+
+    # ── FRETE ─────────────────────────────────────────────────────
+    FaixaFreteRequest:
+      type: object
+      required: [tipoEnvio, pesoMinGramas, pesoMaxGramas, custoYuan]
+      properties:
+        tipoEnvio:
+          $ref: '#/components/schemas/TipoEnvio'
+        pesoMinGramas:
+          type: integer
+          minimum: 0
+        pesoMaxGramas:
+          type: integer
+          minimum: 1
+        custoYuan:
+          type: number
+          format: double
+          minimum: 0.01
+
+    FaixaFreteResponse:
+      allOf:
+        - $ref: '#/components/schemas/FaixaFreteRequest'
+        - type: object
+          properties:
+            id:
+              type: integer
+              format: int64
+
+    CalcularFreteRequest:
+      type: object
+      required: [tipoEnvio, pesoGramas]
+      properties:
+        tipoEnvio:
+          $ref: '#/components/schemas/TipoEnvio'
+        pesoGramas:
+          type: integer
+          minimum: 1
+
+    CalcularFreteResponse:
+      type: object
+      properties:
+        custoYuan:
+          type: number
+          format: double
+        faixaAplicada:
+          $ref: '#/components/schemas/FaixaFreteResponse'
+
+    # ── ORÇAMENTO ─────────────────────────────────────────────────
+    OrcamentoRequest:
+      type: object
+      required: [nomeProduto, custoYuan, pesoGramas, cambio]
+      properties:
+        nomeProduto:
+          type: string
+        categoria:
+          $ref: '#/components/schemas/Categoria'
+        custoYuan:
+          type: number
+          format: double
+          minimum: 0.01
+        freteVendedorYuan:
+          type: number
+          format: double
+          default: 0
+        freteInternacionalYuan:
+          type: number
+          format: double
+          default: 0
+        taxaCssbuyYuan:
+          type: number
+          format: double
+          default: 0
+        taxaAlfandegariaBrl:
+          type: number
+          format: double
+          default: 0
+        pesoGramas:
+          type: integer
+          minimum: 1
+        cambio:
+          type: number
+          format: double
+          minimum: 0.001
+        precoVendaBrl:
+          type: number
+          format: double
+
+    OrcamentoResultadoResponse:
+      type: object
+      properties:
+        custoProdutoBrl:
+          type: number
+          format: double
+        custeFreteVendedorBrl:
+          type: number
+          format: double
+        custeFreteInternacionalBrl:
+          type: number
+          format: double
+        custoCssbuyBrl:
+          type: number
+          format: double
+        taxaAlfandegariaBrl:
+          type: number
+          format: double
+        custoTotalBrl:
+          type: number
+          format: double
+        precoVendaBrl:
+          type: number
+          format: double
+        lucroBrl:
+          type: number
+          format: double
+        margemPercentual:
+          type: number
+          format: double
+        precoSugeridoMargem20:
+          type: number
+          format: double
+        precoSugeridoMargem30:
+          type: number
+          format: double
+
+    OrcamentoResponse:
+      allOf:
+        - type: object
+          properties:
+            id:
+              type: integer
+              format: int64
+            dataCriacao:
+              type: string
+              format: date-time
+        - $ref: '#/components/schemas/OrcamentoRequest'
+        - $ref: '#/components/schemas/OrcamentoResultadoResponse'
+
+    # ── DASHBOARD VENDEDOR ────────────────────────────────────────
+    DashboardVendedorResponse:
+      type: object
+      properties:
+        totalReceberBrl:
+          type: number
+          format: double
+        compradoresPendentes:
+          type: integer
+        lucroTotalBrl:
+          type: number
+          format: double
+        totalPacotes:
+          type: integer
+        totalCompradoresUnicos:
+          type: integer
+        ticketMedioBrl:
+          type: number
+          format: double
+        usoPlano:
+          $ref: '#/components/schemas/UsoPlanoPorcentagem'
+        pacotesRecentes:
+          type: array
+          items:
+            $ref: '#/components/schemas/PacoteResumoResponse'
+
+    # ── DASHBOARD ADMIN ───────────────────────────────────────────
+    DashboardAdminResponse:
+      type: object
+      properties:
+          totalTenants:
+            type: integer
+          tenantsPagantes:
+            type: integer
+          mrrBrl:
+            type: number
+            format: double
+          novosCadastros30Dias:
+            type: integer
+          totalCompradores:
+            type: integer
+          totalPacotesPlataforma:
+            type: integer
+
+    TenantAdminResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        nomeVendedor:
+          type: string
+        email:
+          type: string
+        plano:
+          $ref: '#/components/schemas/NomePlano'
+        statusConta:
+          type: string
+          enum: [TRIAL, ATIVO, SUSPENSO, CANCELADO]
+        dataCadastro:
+          type: string
+          format: date-time
+        ultimoAcesso:
+          type: string
+          format: date-time
+        totalPacotes:
+          type: integer
+        totalCompradores:
+          type: integer
+        mrrBrl:
+          type: number
+          format: double
+
+    # ── ERROS ─────────────────────────────────────────────────────
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: integer
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    ValidationErrorResponse:
+      type: object
+      properties:
+        status:
+          type: integer
+        message:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+        timestamp:
+          type: string
+          format: date-time
+
+# ─────────────────────────────────────────────────────────────────
+# PATHS
+# ─────────────────────────────────────────────────────────────────
+tags:
+  - name: Auth
+  - name: Vendedor - Dashboard
+  - name: Vendedor - Compradores
+  - name: Vendedor - Produtos
+  - name: Vendedor - Pacotes
+  - name: Vendedor - Itens
+  - name: Vendedor - Frete
+  - name: Vendedor - Orçamento
+  - name: Vendedor - Conta
+  - name: Portal - Comprador
+  - name: Admin
+
+paths:
+
+  # ── AUTH (PÚBLICO) ────────────────────────────────────────────
+  /auth/login:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Login para todos os perfis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login realizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/cadastro/vendedor:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Cadastro de novo vendedor (inicia trial)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CadastroVendedorRequest'
+      responses:
+        '201':
+          description: Vendedor criado, trial iniciado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/cadastro/comprador:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Cadastro de comprador via código de convite
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CadastroCompradorRequest'
+      responses:
+        '201':
+          description: Comprador criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/recuperar-senha:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Envia email de recuperação de senha
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecuperarSenhaRequest'
+      responses:
+        '200':
+          description: Email enviado (mesmo se o email não existir, por segurança)
+
+  /auth/redefinir-senha:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Redefine senha via token do email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RedefinirSenhaRequest'
+      responses:
+        '200':
+          description: Senha redefinida
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  # ── VENDEDOR — DASHBOARD ───────────────────────────────────────
+  /vendedor/dashboard:
+    get:
+      tags: [Vendedor - Dashboard]
+      summary: KPIs do vendedor
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardVendedorResponse'
+
+  # ── VENDEDOR — COMPRADORES ─────────────────────────────────────
+  /vendedor/compradores:
+    get:
+      tags: [Vendedor - Compradores]
+      summary: Lista compradores do vendedor
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CompradorResponse'
+    post:
+      tags: [Vendedor - Compradores]
+      summary: Cadastra novo comprador
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompradorRequest'
+      responses:
+        '201':
+          description: Criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompradorResponse'
+        '429':
+          $ref: '#/components/responses/LimitExceeded'
+
+  /vendedor/compradores/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Vendedor - Compradores]
+      summary: Detalhe do comprador
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompradorResponse'
+    put:
+      tags: [Vendedor - Compradores]
+      summary: Atualiza comprador
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompradorRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompradorResponse'
+    delete:
+      tags: [Vendedor - Compradores]
+      summary: Remove comprador
+      responses:
+        '204':
+          description: Removido
+
+  /vendedor/compradores/{id}/convite:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    post:
+      tags: [Vendedor - Compradores]
+      summary: Gera ou regenera código de convite para o portal
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  codigoConvite:
+                    type: string
+                  linkConvite:
+                    type: string
+
+  # ── VENDEDOR — PRODUTOS ───────────────────────────────────────
+  /vendedor/produtos:
+    get:
+      tags: [Vendedor - Produtos]
+      summary: Lista produtos
+      parameters:
+        - name: categoria
+          in: query
+          schema:
+            $ref: '#/components/schemas/Categoria'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProdutoResponse'
+    post:
+      tags: [Vendedor - Produtos]
+      summary: Cria produto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProdutoRequest'
+      responses:
+        '201':
+          description: Criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProdutoResponse'
+
+  /vendedor/produtos/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Vendedor - Produtos]
+      summary: Detalhe do produto
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProdutoResponse'
+    put:
+      tags: [Vendedor - Produtos]
+      summary: Atualiza produto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProdutoRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProdutoResponse'
+    delete:
+      tags: [Vendedor - Produtos]
+      summary: Remove produto
+      responses:
+        '204':
+          description: Removido
+
+  /vendedor/produtos/{id}/foto:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    post:
+      tags: [Vendedor - Produtos]
+      summary: Faz upload da foto do produto
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                foto:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fotoUrl:
+                    type: string
+
+  # ── VENDEDOR — PACOTES ────────────────────────────────────────
+  /vendedor/pacotes:
+    get:
+      tags: [Vendedor - Pacotes]
+      summary: Lista pacotes do vendedor
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/StatusPacote'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PacoteResumoResponse'
+    post:
+      tags: [Vendedor - Pacotes]
+      summary: Cria pacote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PacoteRequest'
+      responses:
+        '201':
+          description: Criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PacoteResumoResponse'
+        '429':
+          $ref: '#/components/responses/LimitExceeded'
+
+  /vendedor/pacotes/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Vendedor - Pacotes]
+      summary: Detalhe do pacote
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PacoteDetalheResponse'
+    put:
+      tags: [Vendedor - Pacotes]
+      summary: Atualiza pacote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PacoteRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PacoteResumoResponse'
+
+  /vendedor/pacotes/{id}/status:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    patch:
+      tags: [Vendedor - Pacotes]
+      summary: Atualiza status do pacote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AtualizarStatusRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PacoteResumoResponse'
+
+  /vendedor/pacotes/{id}/resumo-financeiro:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Vendedor - Pacotes]
+      summary: Resumo financeiro detalhado
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResumoFinanceiroResponse'
+
+  # ── VENDEDOR — ITENS ─────────────────────────────────────────
+  /vendedor/pacotes/{id}/itens:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Vendedor - Itens]
+      summary: Itens do pacote agrupados por comprador
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ItensPorCompradorResponse'
+    post:
+      tags: [Vendedor - Itens]
+      summary: Adiciona item ao pacote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderItemRequest'
+      responses:
+        '201':
+          description: Criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderItemResponse'
+
+  /vendedor/pacotes/{id}/itens/{itemId}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    put:
+      tags: [Vendedor - Itens]
+      summary: Atualiza item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderItemUpdateRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderItemResponse'
+    delete:
+      tags: [Vendedor - Itens]
+      summary: Remove item
+      responses:
+        '204':
+          description: Removido
+
+  # ── VENDEDOR — FRETE ─────────────────────────────────────────
+  /vendedor/frete/tabela:
+    get:
+      tags: [Vendedor - Frete]
+      summary: Lista faixas de frete
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FaixaFreteResponse'
+    post:
+      tags: [Vendedor - Frete]
+      summary: Cadastra faixa de frete
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FaixaFreteRequest'
+      responses:
+        '201':
+          description: Criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FaixaFreteResponse'
+
+  /vendedor/frete/calcular:
+    post:
+      tags: [Vendedor - Frete]
+      summary: Calcula frete para peso e tipo de envio
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalcularFreteRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcularFreteResponse'
+
+  # ── VENDEDOR — ORÇAMENTO ─────────────────────────────────────
+  /vendedor/orcamentos:
+    get:
+      tags: [Vendedor - Orçamento]
+      summary: Histórico de orçamentos salvos
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrcamentoResponse'
+    post:
+      tags: [Vendedor - Orçamento]
+      summary: Salva um orçamento calculado
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrcamentoRequest'
+      responses:
+        '201':
+          description: Salvo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrcamentoResponse'
+
+  /vendedor/orcamentos/simular:
+    post:
+      tags: [Vendedor - Orçamento]
+      summary: Simula custo sem salvar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrcamentoRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrcamentoResultadoResponse'
+
+  # ── VENDEDOR — CONTA ─────────────────────────────────────────
+  /vendedor/conta/plano:
+    get:
+      tags: [Vendedor - Conta]
+      summary: Plano atual e uso dos limites
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plano:
+                    $ref: '#/components/schemas/PlanoResponse'
+                  uso:
+                    $ref: '#/components/schemas/UsoPlanoPorcentagem'
+
+  # ── PORTAL DO COMPRADOR ───────────────────────────────────────
+  /portal/meus-pedidos:
+    get:
+      tags: [Portal - Comprador]
+      summary: Dashboard e lista de pedidos do comprador autenticado
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeusPedidosResponse'
+
+  /portal/meus-pedidos/{itemId}:
+    parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    get:
+      tags: [Portal - Comprador]
+      summary: Detalhe de um pedido específico
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoCompradorResponse'
+
+  # ── ADMIN ─────────────────────────────────────────────────────
+  /admin/dashboard:
+    get:
+      tags: [Admin]
+      summary: Métricas globais da plataforma
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardAdminResponse'
+
+  /admin/tenants:
+    get:
+      tags: [Admin]
+      summary: Lista todos os vendedores
+      parameters:
+        - name: plano
+          in: query
+          schema:
+            $ref: '#/components/schemas/NomePlano'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [TRIAL, ATIVO, SUSPENSO, CANCELADO]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TenantAdminResponse'
+
+  /admin/tenants/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Admin]
+      summary: Detalhe do vendedor
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantAdminResponse'
+
+  /admin/tenants/{id}/suspender:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    patch:
+      tags: [Admin]
+      summary: Suspende conta do vendedor
+      responses:
+        '200':
+          description: OK
+
+  /admin/tenants/{id}/reativar:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    patch:
+      tags: [Admin]
+      summary: Reativa conta suspensa
+      responses:
+        '200':
+          description: OK
+
+  /admin/tenants/{id}/plano:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    patch:
+      tags: [Admin]
+      summary: Altera plano do vendedor manualmente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plano]
+              properties:
+                plano:
+                  $ref: '#/components/schemas/NomePlano'
+      responses:
+        '200':
+          description: OK
