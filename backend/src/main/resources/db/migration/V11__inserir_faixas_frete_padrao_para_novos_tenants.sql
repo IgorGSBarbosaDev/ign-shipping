@@ -1,5 +1,8 @@
--- Nota: as faixas reais são inseridas programaticamente ao criar cada tenant
--- Este arquivo documenta os valores padrão usados pelo TenantService
--- EXPRESSA: 0-1kg=¥80, 1-2kg=¥140, 2-3kg=¥190, 3-5kg=¥280
--- ECONOMICA: 0-1kg=¥45, 1-2kg=¥85, 2-3kg=¥120, 3-5kg=¥175
-SELECT 1; -- placeholder para manter sequência do Flyway
+-- Nota: as faixas de frete reais são inseridas programaticamente ao criar cada tenant
+-- Este arquivo insere o admin inicial do sistema
+
+-- Senha: Admin@123 (BCrypt hash)
+INSERT INTO usuarios (tenant_id, nome, email, senha_hash, role, ativo)
+VALUES (NULL, 'Administrador', 'admin@ignshipping.com',
+        '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LjTa.MA9RX2',
+        'ADMIN', TRUE);
