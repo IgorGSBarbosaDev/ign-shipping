@@ -1,4 +1,4 @@
-package br.com.ignshiopping;
+package br.com.ignshipping;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
