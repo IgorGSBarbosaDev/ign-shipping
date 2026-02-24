@@ -11,6 +11,7 @@ import br.com.ignshipping.repository.*;
 import br.com.ignshipping.security.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -39,6 +40,9 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
     private final JavaMailSender mailSender;
+
+    @Value("${app.frontend.url}")
+    private String frontendUrl;
 
     // ── Login ──────────────────────────────────────────────────
 
@@ -218,7 +222,7 @@ public class AuthService {
 
     private void enviarEmailRecuperacao(String email, String token) {
         try {
-            String link = "http://localhost:5173/auth/redefinir-senha?token=" + token;
+            String link = frontendUrl + "/auth/redefinir-senha?token=" + token;
 
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(email);
