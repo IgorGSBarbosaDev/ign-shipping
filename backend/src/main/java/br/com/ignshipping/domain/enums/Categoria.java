@@ -1,7 +1,7 @@
 package br.com.ignshipping.domain.enums;
 
 public enum Categoria {
-    CAMISA,
+    ROUPAS,
     TENIS,
     ELETRONICO,
     OUTROS

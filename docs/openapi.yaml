@@ -68,7 +68,7 @@ components:
 
     Categoria:
       type: string
-      enum: [CAMISA, TENIS, ELETRONICO, OUTROS]
+      enum: [ROUPAS, TENIS, ELETRONICO, OUTROS]
 
     StatusPacote:
       type: string
