@@ -12,6 +12,7 @@ import br.com.ignshipping.repository.CompradorRepository;
 import br.com.ignshipping.repository.OrderItemRepository;
 import br.com.ignshipping.repository.TenantRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +29,9 @@ public class CompradorService {
     private final TenantRepository tenantRepository;
     private final LimiteService limiteService;
     private final CompradorMapper compradorMapper;
+
+    @Value("${app.frontend.url}")
+    private String frontendUrl;
 
     public List<CompradorResponse> listar(Long tenantId) {
         return compradorRepository.findAllByTenantIdOrderByNomeAsc(tenantId)
@@ -80,7 +84,7 @@ public class CompradorService {
         comprador.setCodigoConvite(codigo);
         compradorRepository.save(comprador);
 
-        String link = "http://localhost:5173/auth/cadastro?convite=" + codigo;
+        String link = frontendUrl + "/auth/cadastro?convite=" + codigo;
         return new ConviteResponse(codigo, link);
     }
 

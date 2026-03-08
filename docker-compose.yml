@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ign-postgres
+    environment:
+      POSTGRES_DB: ign_shipping
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: ign-redis
+    ports:
+      - "6379:6379"
+    # Redis usado para: rate limiting, cache de sessão (futuro)
+
+  backend:
+    build: ./backend
+    container_name: ign-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ign_shipping
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      APP_JWT_SECRET: ${JWT_SECRET}
+      APP_CORS_ALLOWED_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      APP_FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./uploads:/app/uploads
+
+  swagger-ui:
+    image: swaggerapi/swagger-ui
+    container_name: ign-swagger
+    environment:
+      SWAGGER_JSON: /openapi.yaml
+    volumes:
+      - ./docs/openapi.yaml:/openapi.yaml
+    ports:
+      - "8090:8080"
+
+volumes:
+  postgres_data:
