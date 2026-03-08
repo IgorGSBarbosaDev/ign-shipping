@@ -439,17 +439,6 @@ Pacote com 1000g total, frete ¥200, câmbio 0.75:
 
 ---
 
-## Planos e Limites
-
-| Plano | Pacotes/mês | Compradores | Produtos | Portal | Preço |
-|---|---|---|---|---|---|
-| GRATUITO | 2 | 10 | 20 | Não | R$ 0 |
-| BASICO | 10 | 50 | Ilimitado | Sim | R$ 29,90 |
-| PRO | Ilimitado | Ilimitado | Ilimitado | Sim | R$ 69,90 |
-| ENTERPRISE | Ilimitado | Ilimitado | Ilimitado | Sim | R$ 199,00 |
-
-Novos vendedores iniciam com **trial PRO de 14 dias**. A verificação de limites é feita pelo `LimiteService` antes de cada operação de criação.
-
 ### Status do pacote (fluxo)
 
 ```
