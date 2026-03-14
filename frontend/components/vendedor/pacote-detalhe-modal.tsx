@@ -409,7 +409,7 @@ function PacoteDetalheModalInner({
                   <div>
                     <p className="text-xs text-gray-400">Câmbio utilizado</p>
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {pacote.cambio ? `¥1 = R$${pacote.cambio.toFixed(2)}` : '—'}
+                      {pacote.cambio ? `R$1 = ¥${pacote.cambio.toFixed(2)}` : '—'}
                     </p>
                   </div>
                   <div>
@@ -844,7 +844,7 @@ function AddItemModal({
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     Custo: {formatYuan(selectedProduto.custoYuan ?? 0)}
                     {cambio
-                      ? ` → ~${formatBRL((selectedProduto.custoYuan ?? 0) * cambio)}`
+                      ? ` → ~${formatBRL((selectedProduto.custoYuan ?? 0) / cambio)}`
                       : ''}
                   </p>
                   <p className="text-xs text-gray-400">

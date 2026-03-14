@@ -1657,7 +1657,11 @@ export interface components {
         PacoteRequest: {
             nome: string;
             tipoEnvio?: components["schemas"]["TipoEnvio"];
-            /** Format: double */
+            /**
+             * Format: double
+             * @description Quantos yuan equivalem a 1 BRL (ex.: 1.24 significa R$1 = ¥1,24).
+             * @example 1.24
+             */
             cambio?: number;
             /**
              * Format: double
@@ -1683,7 +1687,10 @@ export interface components {
             margemPercentual?: number;
             totalCompradores?: number;
             totalItens?: number;
-            /** Format: double */
+            /**
+             * Format: double
+             * @description Quantos yuan equivalem a 1 BRL usado no pacote.
+             */
             cambio?: number;
             /** Format: date-time */
             dataCriacao?: string;
@@ -1782,7 +1789,10 @@ export interface components {
         ResumoFinanceiroResponse: {
             /** Format: int64 */
             pacoteId?: number;
-            /** Format: double */
+            /**
+             * Format: double
+             * @description Câmbio utilizado na forma BRL->CNY (R$1 = ¥X).
+             */
             cambioUtilizado?: number;
             /** Format: double */
             custoTotalYuan?: number;
@@ -1852,7 +1862,11 @@ export interface components {
              */
             taxaAlfandegariaBrl: number;
             pesoGramas: number;
-            /** Format: double */
+            /**
+             * Format: double
+             * @description Quantos yuan equivalem a 1 BRL (ex.: 1.24 significa R$1 = ¥1,24).
+             * @example 1.24
+             */
             cambio: number;
             /** Format: double */
             precoVendaBrl?: number;

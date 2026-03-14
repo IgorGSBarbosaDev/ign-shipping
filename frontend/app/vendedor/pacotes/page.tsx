@@ -273,7 +273,7 @@ export default function PacotesPage() {
                     <TableCell>
                       {pacote.cambio ? (
                         <span className="text-sm text-gray-900 dark:text-white">
-                          ¥1 = R${pacote.cambio.toFixed(2)}
+                          R$1 = ¥{pacote.cambio.toFixed(2)}
                         </span>
                       ) : (
                         <span className="text-xs text-gray-400">—</span>
@@ -345,14 +345,14 @@ export default function PacotesPage() {
 
               <div>
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
-                  Câmbio atual (¥ → R$)
+                  Câmbio atual (R$1 = ¥X)
                 </label>
                 <input
                   type="number"
                   step="0.01"
                   {...register('cambio')}
                   className="w-full h-10 px-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Ex: 0.75"
+                  placeholder="Ex: 1.24"
                 />
                 <p className="text-xs text-gray-400 mt-1">
                   Apenas &apos;Nome&apos; é obrigatório. Os demais campos podem ser preenchidos depois.

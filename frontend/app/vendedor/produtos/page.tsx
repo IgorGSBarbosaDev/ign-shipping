@@ -68,7 +68,7 @@ const categoriaColors: Record<Categoria, string> = {
   OUTROS: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400',
 }
 
-const CAMBIO_ESTIMADO = 0.75
+const CAMBIO_ESTIMADO = 1.24
 
 const categoriaFilterKeys: { key: Categoria | 'TODOS'; label: string }[] = [
   { key: 'TODOS', label: 'Todos' },
@@ -140,7 +140,7 @@ export default function ProdutosPage() {
   const watchCustoYuan = watch('custoYuan') || 0
   const watchFreteYuan = watch('freteVendedorYuan') || 0
   const custoTotalYuan = Number(watchCustoYuan) + Number(watchFreteYuan)
-  const custoEstimadoBrl = custoTotalYuan * CAMBIO_ESTIMADO
+  const custoEstimadoBrl = custoTotalYuan / CAMBIO_ESTIMADO
 
   // ── Handlers ──────────────────────────────────────────────────────
 
@@ -354,7 +354,7 @@ export default function ProdutosPage() {
             Custo estimado: R$ {custoEstimadoBrl.toFixed(2)}
           </p>
           <p className="text-xs text-blue-400 dark:text-blue-500 mt-1">
-            (câmbio estimado: ¥1 = R${CAMBIO_ESTIMADO.toFixed(2)})
+            (câmbio estimado: R$1 = ¥{CAMBIO_ESTIMADO.toFixed(2)})
           </p>
         </div>
       )}
@@ -428,7 +428,7 @@ export default function ProdutosPage() {
                 {list.map((produto) => {
                   const custoTotal =
                     (produto.custoYuan ?? 0) + (produto.freteVendedorYuan ?? 0)
-                  const custoEstBrl = custoTotal * CAMBIO_ESTIMADO
+                  const custoEstBrl = custoTotal / CAMBIO_ESTIMADO
                   return (
                     <TableRow
                       key={produto.id}

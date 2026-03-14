@@ -39,7 +39,7 @@ const simuladorSchema = z.object({
   freteVendedorYuan: z.coerce.number().min(0).default(0),
   freteInternacionalYuan: z.coerce.number().min(0).default(0),
   taxaCssbuyYuan: z.coerce.number().min(0).default(0),
-  cambio: z.coerce.number().positive('Câmbio é obrigatório').default(0.75),
+  cambio: z.coerce.number().positive('Câmbio é obrigatório').default(1.24),
   qtdItensNoPacote: z.coerce.number().int().positive('Quantidade deve ser ao menos 1').default(1),
   estimativaTaxaReceita: z.coerce.number().min(0).default(0),
   precoVendaBrl: z.coerce.number().min(0).optional().or(z.literal(0)),
@@ -66,10 +66,11 @@ interface Resultado {
 
 function calcularLocal(vals: Partial<SimuladorForm>): Resultado {
   const cambio = Number(vals.cambio) || 0
-  const custoProdutoBrl = (Number(vals.custoYuan) || 0) * cambio
-  const custeFreteVendedorBrl = (Number(vals.freteVendedorYuan) || 0) * cambio
-  const custeFreteInternacionalBrl = (Number(vals.freteInternacionalYuan) || 0) * cambio
-  const custoCssbuyBrl = (Number(vals.taxaCssbuyYuan) || 0) * cambio
+  const divisor = cambio > 0 ? cambio : 1
+  const custoProdutoBrl = (Number(vals.custoYuan) || 0) / divisor
+  const custeFreteVendedorBrl = (Number(vals.freteVendedorYuan) || 0) / divisor
+  const custeFreteInternacionalBrl = (Number(vals.freteInternacionalYuan) || 0) / divisor
+  const custoCssbuyBrl = (Number(vals.taxaCssbuyYuan) || 0) / divisor
   const qtdItens = Number(vals.qtdItensNoPacote) || 1
   const estimativaTaxa = Number(vals.estimativaTaxaReceita) || 0
   const taxaAlf = qtdItens > 0 ? estimativaTaxa / qtdItens : 0
@@ -195,7 +196,7 @@ export default function SimuladorPage() {
       freteVendedorYuan: 0,
       freteInternacionalYuan: 0,
       taxaCssbuyYuan: 0,
-      cambio: 0.75,
+      cambio: 1.24,
       qtdItensNoPacote: 1,
       estimativaTaxaReceita: 0,
       precoVendaBrl: 0,
@@ -210,7 +211,7 @@ export default function SimuladorPage() {
   const temDados = resultado.custoTotalBrl > 0
 
   const limpar = () => {
-    const currentCambio = watched.cambio ?? 0.75
+    const currentCambio = watched.cambio ?? 1.24
     reset({
       nomeProduto: '',
       categoria: undefined,
@@ -268,20 +269,37 @@ export default function SimuladorPage() {
             <div className="h-px bg-gray-200 dark:bg-gray-800 mb-4" />
 
             <div>
-              <label htmlFor="cambio" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
-                Câmbio atual (R$/¥) <span className="text-red-500">*</span>
-              </label>
+              <div className="flex items-center gap-2 mb-1">
+                <label htmlFor="cambio" className="text-sm font-medium text-gray-700 dark:text-gray-300 block">
+                  Câmbio atual (R$1 = ¥X) <span className="text-red-500">*</span>
+                </label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-gray-200 text-[10px] font-bold text-gray-700 cursor-help"
+                        aria-label="Explicação do câmbio"
+                      >
+                        !
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs max-w-xs">
+                        Exemplo: se 1 BRL = 1,24 CNY, ao inserir 100 BRL o sistema considera 124 CNY.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <input
                 id="cambio"
                 type="number"
                 step="0.01"
                 {...register('cambio', { valueAsNumber: true })}
                 className="w-full h-10 px-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="0.75"
+                placeholder="1.24"
               />
-              <p className="text-xs text-gray-400 mt-1">
-                Ex: 0.75 significa ¥1 = R$0,75
-              </p>
               {errors.cambio && (
                 <p className="text-red-500 text-xs mt-1">{errors.cambio.message}</p>
               )}

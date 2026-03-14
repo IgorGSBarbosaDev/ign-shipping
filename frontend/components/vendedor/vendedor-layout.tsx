@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
@@ -9,11 +9,9 @@ import {
   Users,
   ShoppingBag,
   Calculator,
-  Truck,
   ChevronLeft,
   ChevronRight,
   LogOut,
-  Plus,
   Sun,
   Moon,
 } from 'lucide-react'
@@ -21,6 +19,7 @@ import { cn } from '@/lib/utils'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAuthStore } from '@/store/authStore'
 import { useTheme } from '@/components/theme-provider'
+import { usePacotes } from '@/hooks/vendedor/usePacotes'
 
 // ── Navigation config ────────────────────────────────────────────────────
 
@@ -50,7 +49,6 @@ const navSections: NavSection[] = [
     title: 'Ferramentas',
     items: [
       { icon: Calculator, label: 'Simulador de Custo', href: '/vendedor/simulador' },
-      { icon: Truck, label: 'Tabela de Frete', href: '/vendedor/frete' },
     ],
   },
 ]
@@ -63,7 +61,6 @@ const routeTitleMap: Record<string, string> = {
   '/vendedor/compradores': 'Compradores',
   '/vendedor/produtos': 'Produtos',
   '/vendedor/simulador': 'Simulador de Custo',
-  '/vendedor/frete': 'Tabela de Frete',
   '/vendedor/conta': 'Minha Conta',
 }
 
@@ -100,6 +97,11 @@ export function VendedorLayout({ children }: VendedorLayoutProps) {
   const { collapsed, toggle } = useSidebarCollapsed()
   const { theme, setTheme } = useTheme()
   const { usuario, logout } = useAuthStore()
+  const { data: pacotes } = usePacotes()
+
+  const pacotesNaoFinalizados = useMemo(() => {
+    return (pacotes ?? []).filter((pacote) => pacote.status !== 'FINALIZADO').length
+  }, [pacotes])
 
   const pageTitle = routeTitleMap[pathname] || 'IGN Shipping'
   const sidebarWidth = collapsed ? 56 : 240
@@ -168,6 +170,10 @@ export function VendedorLayout({ children }: VendedorLayoutProps) {
                   {section.items.map((item) => {
                     const Icon = item.icon
                     const isActive = pathname === item.href
+                    const badgeValue =
+                      item.href === '/vendedor/pacotes'
+                        ? (pacotesNaoFinalizados > 0 ? String(pacotesNaoFinalizados) : undefined)
+                        : item.badge
 
                     const navLink = (
                       <Link
@@ -185,9 +191,9 @@ export function VendedorLayout({ children }: VendedorLayoutProps) {
                         {!collapsed && (
                           <>
                             <span className="flex-1">{item.label}</span>
-                            {item.badge && (
+                            {badgeValue && (
                               <span className="bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
-                                {item.badge}
+                                {badgeValue}
                               </span>
                             )}
                           </>
@@ -274,13 +280,6 @@ export function VendedorLayout({ children }: VendedorLayoutProps) {
                 <Sun className="w-4 h-4 text-gray-600 dark:text-gray-400" />
               )}
             </button>
-            <Link
-              href="/vendedor/pacotes"
-              className="bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg px-4 h-9 flex items-center gap-2 transition"
-            >
-              <Plus className="w-4 h-4" />
-              Novo Pacote
-            </Link>
           </div>
         </header>
 
