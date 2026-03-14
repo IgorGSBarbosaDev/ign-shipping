@@ -51,7 +51,8 @@ public class OrderItemService {
         // Forçar carregamento dos produtos
         itens.forEach(item -> item.getProduto().getPesoGramas());
 
-        BigDecimal cambio = pacote.getCambio() != null ? pacote.getCambio() : BigDecimal.ONE;
+        BigDecimal cambio = pacote.getCambio() != null && pacote.getCambio().compareTo(BigDecimal.ZERO) > 0
+                ? pacote.getCambio() : BigDecimal.ONE;
         BigDecimal freteInternYuan = pacote.getFreteInternacionalYuan() != null
                 ? pacote.getFreteInternacionalYuan() : BigDecimal.ZERO;
 
@@ -66,9 +67,9 @@ public class OrderItemService {
             BigDecimal proporcaoPeso = BigDecimal.valueOf(pesoItem)
                     .divide(BigDecimal.valueOf(pesoTotalPacote), 10, RoundingMode.HALF_UP);
 
-            // custoRateadoBrl = (freteInternYuan + taxaCssbuyYuan) * cambio * proporcaoPeso
+            // custoRateadoBrl = ((freteInternYuan + taxaCssbuyYuan) / cambio) * proporcaoPeso
             BigDecimal custoRateado = freteInternYuan.add(TAXA_CSSBUY_YUAN)
-                    .multiply(cambio)
+                    .divide(cambio, 10, RoundingMode.HALF_UP)
                     .multiply(proporcaoPeso)
                     .setScale(2, RoundingMode.HALF_UP);
 
@@ -211,7 +212,8 @@ public class OrderItemService {
     }
 
     private OrderItemResponse toOrderItemResponseComPeso(OrderItem item, Pacote pacote, int pesoTotalPacote) {
-        BigDecimal cambio = pacote.getCambio() != null ? pacote.getCambio() : BigDecimal.ONE;
+        BigDecimal cambio = pacote.getCambio() != null && pacote.getCambio().compareTo(BigDecimal.ZERO) > 0
+                ? pacote.getCambio() : BigDecimal.ONE;
         BigDecimal taxaAlfandegariaBrl = pacote.getTaxaAlfandegariaBrl() != null
                 ? pacote.getTaxaAlfandegariaBrl() : BigDecimal.ZERO;
         BigDecimal freteInternYuan = pacote.getFreteInternacionalYuan() != null
@@ -222,10 +224,10 @@ public class OrderItemService {
 
         BigDecimal custoRateado = item.getCustoRateadoBrl() != null ? item.getCustoRateadoBrl() : BigDecimal.ZERO;
 
-        // custoTotalItem = (custoYuan + freteVendedorYuan) * cambio * quantidade + custoRateado + (taxaAlfandegaria * proporcao)
+        // custoTotalItem = ((custoYuan + freteVendedorYuan) / cambio) * quantidade + custoRateado + (taxaAlfandegaria * proporcao)
         BigDecimal custoTotalItem = item.getProduto().getCustoYuan()
                 .add(item.getProduto().getFreteVendedorYuan())
-                .multiply(cambio)
+                .divide(cambio, 10, RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(item.getQuantidade()))
                 .add(custoRateado)
                 .add(taxaAlfandegariaBrl.multiply(BigDecimal.valueOf(proporcaoPeso)))

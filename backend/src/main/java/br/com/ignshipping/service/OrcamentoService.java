@@ -72,10 +72,10 @@ public class OrcamentoService {
         BigDecimal taxaCssbuyYuan = defaultZero(req.taxaCssbuyYuan());
         BigDecimal taxaAlfandBrl = defaultZero(req.taxaAlfandegariaBrl());
 
-        BigDecimal custoProdutoBrl = custoYuan.multiply(cambio).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal custoFreteVendBrl = freteVendedorYuan.multiply(cambio).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal custoFreteInternBrl = freteInternYuan.multiply(cambio).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal custoCssbuyBrl = taxaCssbuyYuan.multiply(cambio).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal custoProdutoBrl = converterYuanParaBrl(custoYuan, cambio);
+        BigDecimal custoFreteVendBrl = converterYuanParaBrl(freteVendedorYuan, cambio);
+        BigDecimal custoFreteInternBrl = converterYuanParaBrl(freteInternYuan, cambio);
+        BigDecimal custoCssbuyBrl = converterYuanParaBrl(taxaCssbuyYuan, cambio);
 
         BigDecimal custoTotalBrl = custoProdutoBrl
                 .add(custoFreteVendBrl)
@@ -116,6 +116,17 @@ public class OrcamentoService {
     private BigDecimal defaultZero(BigDecimal value) {
         return value != null ? value : BigDecimal.ZERO;
     }
+
+        private BigDecimal converterYuanParaBrl(BigDecimal valorYuan, BigDecimal cambioBrlParaYuan) {
+                if (valorYuan == null || valorYuan.compareTo(BigDecimal.ZERO) == 0) {
+                        return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+                }
+
+                BigDecimal cambioSeguro = (cambioBrlParaYuan == null || cambioBrlParaYuan.compareTo(BigDecimal.ZERO) <= 0)
+                                ? BigDecimal.ONE : cambioBrlParaYuan;
+
+                return valorYuan.divide(cambioSeguro, 2, RoundingMode.HALF_UP);
+        }
 
     private OrcamentoResponse toResponse(Orcamento o) {
         BigDecimal custoTotalBrl = o.getCustoTotalBrl() != null ? o.getCustoTotalBrl() : BigDecimal.ZERO;

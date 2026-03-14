@@ -30,8 +30,8 @@ public record OrcamentoRequest(
         @Min(value = 1, message = "Peso deve ser >= 1 grama")
         Integer pesoGramas,
 
-        @NotNull(message = "Câmbio é obrigatório")
-        @DecimalMin(value = "0.001", message = "Câmbio deve ser maior que zero")
+        @NotNull(message = "Câmbio (CNY por BRL) é obrigatório")
+        @DecimalMin(value = "0.001", message = "Câmbio (CNY por BRL) deve ser maior que zero")
         BigDecimal cambio,
 
         BigDecimal precoVendaBrl

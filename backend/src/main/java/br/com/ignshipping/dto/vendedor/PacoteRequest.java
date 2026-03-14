@@ -15,7 +15,7 @@ public record PacoteRequest(
 
         TipoEnvio tipoEnvio,
 
-        @DecimalMin(value = "0.001", message = "Câmbio deve ser maior que zero")
+        @DecimalMin(value = "0.001", message = "Câmbio (CNY por BRL) deve ser maior que zero")
         BigDecimal cambio,
 
         @DecimalMin(value = "0", message = "Taxa alfandegária não pode ser negativa")

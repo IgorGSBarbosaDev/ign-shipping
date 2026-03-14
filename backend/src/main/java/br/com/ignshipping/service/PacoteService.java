@@ -94,10 +94,11 @@ public class PacoteService {
         List<ItensPorCompradorResponse> itensPorComprador =
                 orderItemService.listarAgrupadosPorComprador(id, tenantId);
 
-        BigDecimal cambio = pacote.getCambio() != null ? pacote.getCambio() : BigDecimal.ONE;
+        BigDecimal cambio = pacote.getCambio() != null && pacote.getCambio().compareTo(BigDecimal.ZERO) > 0
+                ? pacote.getCambio() : BigDecimal.ONE;
         BigDecimal freteInternYuan = pacote.getFreteInternacionalYuan() != null
                 ? pacote.getFreteInternacionalYuan() : BigDecimal.ZERO;
-        BigDecimal freteInternBrl = freteInternYuan.multiply(cambio).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal freteInternBrl = converterYuanParaBrl(freteInternYuan, cambio);
 
         return new PacoteDetalheResponse(
                 pacote.getId(), pacote.getNome(), pacote.getStatus(), pacote.getTipoEnvio(),
@@ -176,7 +177,8 @@ public class PacoteService {
                 .orElseThrow(() -> new ResourceNotFoundException("Pacote não encontrado: " + id));
 
         List<OrderItem> itens = pacote.getItens();
-        BigDecimal cambio = pacote.getCambio() != null ? pacote.getCambio() : BigDecimal.ONE;
+        BigDecimal cambio = pacote.getCambio() != null && pacote.getCambio().compareTo(BigDecimal.ZERO) > 0
+                ? pacote.getCambio() : BigDecimal.ONE;
         BigDecimal freteInternYuan = pacote.getFreteInternacionalYuan() != null
                 ? pacote.getFreteInternacionalYuan() : BigDecimal.ZERO;
 
@@ -193,8 +195,8 @@ public class PacoteService {
         BigDecimal lucro = receita.subtract(custoTotal);
         BigDecimal margem = calcularMargem(receita, custoTotal);
 
-        BigDecimal freteInternBrl = freteInternYuan.multiply(cambio).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal taxaCssbuyBrl = TAXA_CSSBUY_YUAN.multiply(cambio).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal freteInternBrl = converterYuanParaBrl(freteInternYuan, cambio);
+        BigDecimal taxaCssbuyBrl = converterYuanParaBrl(TAXA_CSSBUY_YUAN, cambio);
 
         List<ItensPorCompradorResponse> compradores =
                 orderItemService.listarAgrupadosPorComprador(id, tenantId);
@@ -247,14 +249,15 @@ public class PacoteService {
     private BigDecimal calcularCustoTotalBrl(Pacote pacote, List<OrderItem> itens) {
         if (itens.isEmpty()) return BigDecimal.ZERO;
 
-        BigDecimal cambio = pacote.getCambio() != null ? pacote.getCambio() : BigDecimal.ONE;
+        BigDecimal cambio = pacote.getCambio() != null && pacote.getCambio().compareTo(BigDecimal.ZERO) > 0
+                ? pacote.getCambio() : BigDecimal.ONE;
         BigDecimal taxaAlfandegariaBrl = pacote.getTaxaAlfandegariaBrl() != null
                 ? pacote.getTaxaAlfandegariaBrl() : BigDecimal.ZERO;
 
         BigDecimal custoProdutos = itens.stream()
                 .map(i -> i.getProduto().getCustoYuan()
                         .add(i.getProduto().getFreteVendedorYuan())
-                        .multiply(cambio)
+                        .divide(cambio, 10, RoundingMode.HALF_UP)
                         .multiply(BigDecimal.valueOf(i.getQuantidade())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -279,5 +282,16 @@ public class PacoteService {
                 .multiply(BigDecimal.valueOf(100))
                 .divide(receita, 2, RoundingMode.HALF_UP);
     }
+
+        private BigDecimal converterYuanParaBrl(BigDecimal valorYuan, BigDecimal cambioBrlParaYuan) {
+                if (valorYuan == null || valorYuan.compareTo(BigDecimal.ZERO) == 0) {
+                        return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+                }
+
+                BigDecimal cambioSeguro = (cambioBrlParaYuan == null || cambioBrlParaYuan.compareTo(BigDecimal.ZERO) <= 0)
+                                ? BigDecimal.ONE : cambioBrlParaYuan;
+
+                return valorYuan.divide(cambioSeguro, 2, RoundingMode.HALF_UP);
+        }
 }
 

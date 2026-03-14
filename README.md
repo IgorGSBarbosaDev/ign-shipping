@@ -415,22 +415,22 @@ Para cada item no pacote:
   pesoTotal    = soma dos pesos de todos os itens
   proporção    = pesoItem / pesoTotal
 
-  custoRateadoBrl = (freteInternacionalYuan + 30) × câmbio × proporção
+  custoRateadoBrl = ((freteInternacionalYuan + 30) ÷ câmbio) × proporção
 ```
 
 - **30** = taxa fixa CSSBuy (¥)
-- **câmbio** = taxa de conversão ¥ → R$
+- **câmbio** = quantos yuan equivalem a R$1 (R$ → ¥)
 - **freteInternacionalYuan** = custo do frete internacional em ¥
 
 ### Exemplo
 
-Pacote com 1000g total, frete ¥200, câmbio 0.75:
+Pacote com 1000g total, frete ¥200, câmbio 1.24:
 
 | Item | Peso | Proporção | Custo rateado (R$) |
 |---|---|---|---|
-| A | 400g | 40% | (200 + 30) × 0.75 × 0.4 = **69,00** |
-| B | 300g | 30% | (200 + 30) × 0.75 × 0.3 = **51,75** |
-| C | 300g | 30% | (200 + 30) × 0.75 × 0.3 = **51,75** |
+| A | 400g | 40% | ((200 + 30) ÷ 1.24) × 0.4 = **74,19** |
+| B | 300g | 30% | ((200 + 30) ÷ 1.24) × 0.3 = **55,65** |
+| C | 300g | 30% | ((200 + 30) ÷ 1.24) × 0.3 = **55,65** |
 
 ### Quando o recálculo é disparado
 

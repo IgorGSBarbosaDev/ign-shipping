@@ -339,6 +339,8 @@ components:
           type: number
           format: double
           minimum: 0.001
+          description: "Quantos yuan equivalem a 1 BRL (ex.: 1.24 significa R$1 = ¥1,24)."
+          example: 1.24
         taxaAlfandegariaBrl:
           type: number
           format: double
@@ -380,6 +382,7 @@ components:
         cambio:
           type: number
           format: double
+          description: "Quantos yuan equivalem a 1 BRL usado no pacote."
         dataCriacao:
           type: string
           format: date-time
@@ -565,6 +568,7 @@ components:
         cambioUtilizado:
           type: number
           format: double
+          description: "Câmbio utilizado na forma BRL->CNY (R$1 = ¥X)."
         custoTotalYuan:
           type: number
           format: double
@@ -682,6 +686,8 @@ components:
           type: number
           format: double
           minimum: 0.001
+          description: "Quantos yuan equivalem a 1 BRL (ex.: 1.24 significa R$1 = ¥1,24)."
+          example: 1.24
         precoVendaBrl:
           type: number
           format: double
