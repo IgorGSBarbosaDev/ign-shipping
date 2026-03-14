@@ -430,6 +430,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/vendedor/compradores/{id}/historico": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        /** Histórico de compras de um comprador */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: components["parameters"]["IdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CompradorHistoricoResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/vendedor/produtos": {
         parameters: {
             query?: never;
@@ -1625,6 +1665,15 @@ export interface components {
             lucroGeradoBrl?: number;
             /** @description Código para o comprador se cadastrar no portal */
             codigoConvitePortal?: string;
+        };
+        CompradorHistoricoResponse: {
+            comprador?: components["schemas"]["CompradorResponse"];
+            totalPedidos?: number;
+            /** Format: double */
+            totalPagoBrl?: number;
+            /** Format: double */
+            totalPendenteBrl?: number;
+            pedidos?: components["schemas"]["PedidoCompradorResponse"][];
         };
         ProdutoRequest: {
             nome: string;

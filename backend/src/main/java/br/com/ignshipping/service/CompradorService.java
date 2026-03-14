@@ -1,16 +1,25 @@
 package br.com.ignshipping.service;
 
 import br.com.ignshipping.domain.entity.Comprador;
+import br.com.ignshipping.domain.entity.OrderItem;
 import br.com.ignshipping.domain.entity.Tenant;
+import br.com.ignshipping.domain.entity.Usuario;
+import br.com.ignshipping.domain.enums.Role;
+import br.com.ignshipping.domain.enums.StatusPagamento;
+import br.com.ignshipping.dto.portal.PedidoCompradorResponse;
+import br.com.ignshipping.dto.vendedor.CompradorHistoricoResponse;
 import br.com.ignshipping.dto.vendedor.CompradorRequest;
 import br.com.ignshipping.dto.vendedor.CompradorResponse;
 import br.com.ignshipping.dto.vendedor.ConviteResponse;
+import br.com.ignshipping.dto.vendedor.ProdutoResponse;
 import br.com.ignshipping.exception.BusinessException;
 import br.com.ignshipping.exception.ResourceNotFoundException;
 import br.com.ignshipping.mapper.CompradorMapper;
+import br.com.ignshipping.mapper.ProdutoMapper;
 import br.com.ignshipping.repository.CompradorRepository;
 import br.com.ignshipping.repository.OrderItemRepository;
 import br.com.ignshipping.repository.TenantRepository;
+import br.com.ignshipping.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -27,8 +36,10 @@ public class CompradorService {
     private final CompradorRepository compradorRepository;
     private final OrderItemRepository orderItemRepository;
     private final TenantRepository tenantRepository;
+    private final UsuarioRepository usuarioRepository;
     private final LimiteService limiteService;
     private final CompradorMapper compradorMapper;
+    private final ProdutoMapper produtoMapper;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
@@ -43,6 +54,41 @@ public class CompradorService {
     public CompradorResponse buscarPorId(Long id, Long tenantId) {
         Comprador comprador = findByIdAndTenant(id, tenantId);
         return toResponseComCalculos(comprador);
+    }
+
+    public CompradorHistoricoResponse buscarHistorico(Long id, Long tenantId) {
+        Comprador comprador = findByIdAndTenant(id, tenantId);
+        CompradorResponse compradorResponse = toResponseComCalculos(comprador);
+
+        List<OrderItem> itens = orderItemRepository
+                .findAllByCompradorIdAndTenantIdOrderByPacoteCriadoEmDescCriadoEmDesc(comprador.getId(), tenantId);
+
+        BigDecimal totalPago = itens.stream()
+                .filter(item -> item.getStatusPagamento() == StatusPagamento.PAGO)
+                .map(OrderItem::getPrecoVendaBrl)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalPendente = itens.stream()
+                .filter(item -> item.getStatusPagamento() == StatusPagamento.PENDENTE)
+                .map(OrderItem::getPrecoVendaBrl)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        String nomeVendedor = usuarioRepository
+                .findFirstByTenantIdAndRole(tenantId, Role.VENDEDOR)
+                .map(Usuario::getNome)
+                .orElse("Vendedor");
+
+        List<PedidoCompradorResponse> pedidos = itens.stream()
+                .map(item -> toPedidoResponse(item, nomeVendedor))
+                .toList();
+
+        return new CompradorHistoricoResponse(
+                compradorResponse,
+                pedidos.size(),
+                totalPago,
+                totalPendente,
+                pedidos
+        );
     }
 
     @Transactional
@@ -112,6 +158,21 @@ public class CompradorService {
                 totalPendente,
                 lucroGerado,
                 comprador.getCodigoConvite()
+        );
+    }
+
+    private PedidoCompradorResponse toPedidoResponse(OrderItem item, String nomeVendedor) {
+        ProdutoResponse produto = produtoMapper.toResponse(item.getProduto());
+
+        return new PedidoCompradorResponse(
+                item.getId(),
+                produto,
+                item.getQuantidade(),
+                item.getPrecoVendaBrl(),
+                item.getPacote().getStatus(),
+                item.getStatusPagamento(),
+                item.getPacote().getCriadoEm(),
+                nomeVendedor
         );
     }
 }

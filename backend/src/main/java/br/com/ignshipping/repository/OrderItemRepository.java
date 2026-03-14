@@ -14,6 +14,8 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
 
     List<OrderItem> findAllByCompradorId(Long compradorId);
 
+    List<OrderItem> findAllByCompradorIdAndTenantIdOrderByPacoteCriadoEmDescCriadoEmDesc(Long compradorId, Long tenantId);
+
     boolean existsByCompradorId(Long compradorId);
 
     boolean existsByProdutoId(Long produtoId);

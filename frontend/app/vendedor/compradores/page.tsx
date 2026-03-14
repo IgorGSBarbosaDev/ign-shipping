@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -112,6 +113,7 @@ function CompradoresSkeleton() {
 // ── Page ─────────────────────────────────────────────────────────────────
 
 export default function CompradoresPage() {
+  const router = useRouter()
   const { data: compradores, isLoading, error } = useCompradores()
   const criarMutation = useCriarComprador()
   const atualizarMutation = useAtualizarComprador()
@@ -224,6 +226,11 @@ export default function CompradoresPage() {
     setTimeout(() => setLinkCopied(false), 2000)
   }
 
+  const handleAbrirHistorico = (compradorId?: number) => {
+    if (!compradorId) return
+    router.push(`/vendedor/compradores/${compradorId}`)
+  }
+
   // ── Render ────────────────────────────────────────────────────────
 
   if (isLoading) return <CompradoresSkeleton />
@@ -268,18 +275,27 @@ export default function CompradoresPage() {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {list.map((comprador) => (
             <div
               key={comprador.id}
-              className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-5"
+              className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-5 cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => handleAbrirHistorico(comprador.id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  handleAbrirHistorico(comprador.id)
+                }
+              }}
             >
               {/* Header do card */}
               <div className="flex items-start gap-3 mb-3">
                 <div
                   className={`w-10 h-10 rounded-full ${getAvatarColor(
                     comprador.nome ?? ''
-                  )} flex items-center justify-center text-white font-semibold text-sm flex-shrink-0`}
+                  )} flex items-center justify-center text-white font-semibold text-sm shrink-0`}
                 >
                   {getInitials(comprador.nome ?? '')}
                 </div>
@@ -291,11 +307,14 @@ export default function CompradoresPage() {
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <button
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      onClick={(event) => event.stopPropagation()}
+                    >
                       <MoreVertical className="w-5 h-5" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
                     <DropdownMenuItem onClick={() => handleEditComprador(comprador)}>
                       <Pencil className="w-4 h-4 mr-2" />
                       Editar comprador

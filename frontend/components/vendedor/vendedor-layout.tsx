@@ -103,7 +103,9 @@ export function VendedorLayout({ children }: VendedorLayoutProps) {
     return (pacotes ?? []).filter((pacote) => pacote.status !== 'FINALIZADO').length
   }, [pacotes])
 
-  const pageTitle = routeTitleMap[pathname] || 'IGN Shipping'
+  const pageTitle = pathname.startsWith('/vendedor/compradores/')
+    ? 'Historico do Comprador'
+    : (routeTitleMap[pathname] || 'IGN Shipping')
   const sidebarWidth = collapsed ? 56 : 240
 
   // Initials for avatar

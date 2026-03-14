@@ -1,6 +1,7 @@
 package br.com.ignshipping.controller.vendedor;
 
 import br.com.ignshipping.dto.vendedor.CompradorRequest;
+import br.com.ignshipping.dto.vendedor.CompradorHistoricoResponse;
 import br.com.ignshipping.dto.vendedor.CompradorResponse;
 import br.com.ignshipping.dto.vendedor.ConviteResponse;
 import br.com.ignshipping.security.TenantContext;
@@ -39,6 +40,12 @@ public class CompradorController {
     public ResponseEntity<CompradorResponse> buscarPorId(@PathVariable Long id) {
         Long tenantId = TenantContext.getCurrentTenant();
         return ResponseEntity.ok(compradorService.buscarPorId(id, tenantId));
+    }
+
+    @GetMapping("/{id}/historico")
+    public ResponseEntity<CompradorHistoricoResponse> buscarHistorico(@PathVariable Long id) {
+        Long tenantId = TenantContext.getCurrentTenant();
+        return ResponseEntity.ok(compradorService.buscarHistorico(id, tenantId));
     }
 
     @PutMapping("/{id}")

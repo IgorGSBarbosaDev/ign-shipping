@@ -270,6 +270,24 @@ components:
           type: string
           description: Código para o comprador se cadastrar no portal
 
+    CompradorHistoricoResponse:
+      type: object
+      properties:
+        comprador:
+          $ref: '#/components/schemas/CompradorResponse'
+        totalPedidos:
+          type: integer
+        totalPagoBrl:
+          type: number
+          format: double
+        totalPendenteBrl:
+          type: number
+          format: double
+        pedidos:
+          type: array
+          items:
+            $ref: '#/components/schemas/PedidoCompradorResponse'
+
     # ── PRODUTO ──────────────────────────────────────────────────
     ProdutoRequest:
       type: object
@@ -1061,6 +1079,20 @@ paths:
                     type: string
                   linkConvite:
                     type: string
+
+  /vendedor/compradores/{id}/historico:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Vendedor - Compradores]
+      summary: Histórico de compras de um comprador
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompradorHistoricoResponse'
 
   # ── VENDEDOR — PRODUTOS ───────────────────────────────────────
   /vendedor/produtos:

@@ -5,7 +5,9 @@ import {
   atualizar,
   deletar,
   gerarConvite,
+  buscarHistorico,
   type CompradorResponse,
+  type CompradorHistoricoResponse,
   type CompradorRequest,
   type ConviteResponse,
 } from '@/services/compradorService'
@@ -52,5 +54,14 @@ export function useDeletarComprador() {
 export function useGerarConvite() {
   return useMutation<ConviteResponse, Error, number>({
     mutationFn: gerarConvite,
+  })
+}
+
+export function useCompradorHistorico(compradorId: number) {
+  return useQuery<CompradorHistoricoResponse>({
+    queryKey: ['vendedor', 'compradores', 'historico', compradorId],
+    queryFn: () => buscarHistorico(compradorId),
+    enabled: compradorId > 0,
+    staleTime: 60 * 1000,
   })
 }
