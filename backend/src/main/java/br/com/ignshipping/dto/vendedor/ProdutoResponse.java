@@ -9,6 +9,7 @@ public record ProdutoResponse(
         String nome,
         Categoria categoria,
         BigDecimal custoYuan,
+        BigDecimal custoCompraYuan,
         BigDecimal freteVendedorYuan,
         Integer pesoGramas,
         String descricao,

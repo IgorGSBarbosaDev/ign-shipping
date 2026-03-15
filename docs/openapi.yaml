@@ -291,7 +291,7 @@ components:
     # ── PRODUTO ──────────────────────────────────────────────────
     ProdutoRequest:
       type: object
-      required: [nome, categoria, custoYuan, pesoGramas]
+      required: [nome, categoria, custoYuan, custoCompraYuan, pesoGramas]
       properties:
         nome:
           type: string
@@ -303,6 +303,10 @@ components:
           type: number
           format: double
           minimum: 0.01
+        custoCompraYuan:
+          type: number
+          format: double
+          minimum: 0
         freteVendedorYuan:
           type: number
           format: double
@@ -329,6 +333,9 @@ components:
         categoria:
           $ref: '#/components/schemas/Categoria'
         custoYuan:
+          type: number
+          format: double
+        custoCompraYuan:
           type: number
           format: double
         freteVendedorYuan:

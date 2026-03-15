@@ -37,6 +37,9 @@ public class Produto {
     @Column(name = "custo_yuan", nullable = false, precision = 10, scale = 2)
     private BigDecimal custoYuan;
 
+    @Column(name = "custo_compra_yuan", nullable = false, precision = 10, scale = 2)
+    private BigDecimal custoCompraYuan;
+
     @Column(name = "frete_vendedor_yuan", nullable = false, precision = 10, scale = 2)
     private BigDecimal freteVendedorYuan;
 

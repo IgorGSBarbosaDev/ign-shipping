@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -35,6 +35,8 @@ import {
   useAtualizarProduto,
   useDeletarProduto,
 } from '@/hooks/vendedor/useProdutos'
+import { useOrcamentos } from '@/hooks/vendedor/useOrcamentos'
+import { calcularCustoEstimadoProdutoBrl } from '@/lib/utils'
 import type { ProdutoResponse, Categoria } from '@/services/produtoService'
 
 // ── Zod schema ──────────────────────────────────────────────────────────
@@ -46,6 +48,7 @@ const produtoSchema = z.object({
   }),
   pesoGramas: z.coerce.number().positive('Peso deve ser maior que zero'),
   custoYuan: z.coerce.number().positive('Custo deve ser maior que zero'),
+  custoCompraYuan: z.coerce.number().min(0, 'Custo de compra não pode ser negativo'),
   freteVendedorYuan: z.coerce.number().min(0).default(0),
   descricao: z.string().optional(),
 })
@@ -68,7 +71,7 @@ const categoriaColors: Record<Categoria, string> = {
   OUTROS: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400',
 }
 
-const CAMBIO_ESTIMADO = 1.24
+const CAMBIO_PADRAO = 1.24
 
 const categoriaFilterKeys: { key: Categoria | 'TODOS'; label: string }[] = [
   { key: 'TODOS', label: 'Todos' },
@@ -117,6 +120,7 @@ export default function ProdutosPage() {
   const apiCategoria = categoriaFilter === 'TODOS' ? undefined : categoriaFilter
 
   const { data: produtos, isLoading, error } = useProdutos(apiCategoria)
+  const { data: orcamentos } = useOrcamentos()
   const criarMutation = useCriarProduto()
   const atualizarMutation = useAtualizarProduto()
   const deletarMutation = useDeletarProduto()
@@ -137,15 +141,44 @@ export default function ProdutosPage() {
     formState: { errors },
   } = useForm<ProdutoForm>({ resolver: zodResolver(produtoSchema) })
 
-  const watchCustoYuan = watch('custoYuan') || 0
+  const cambioAtual = useMemo(() => {
+    const historico = orcamentos ?? []
+    let ultimoComCambio: { cambio: number; timestamp: number } | null = null
+
+    for (const item of historico) {
+      const cambio = Number(item.cambio)
+      if (!Number.isFinite(cambio) || cambio <= 0) continue
+
+      const timestamp = item.dataCriacao ? new Date(item.dataCriacao).getTime() : 0
+      if (!ultimoComCambio || timestamp >= ultimoComCambio.timestamp) {
+        ultimoComCambio = { cambio, timestamp }
+      }
+    }
+
+    return ultimoComCambio?.cambio ?? CAMBIO_PADRAO
+  }, [orcamentos])
+
+  const watchCustoCompraYuan = watch('custoCompraYuan') || 0
   const watchFreteYuan = watch('freteVendedorYuan') || 0
-  const custoTotalYuan = Number(watchCustoYuan) + Number(watchFreteYuan)
-  const custoEstimadoBrl = custoTotalYuan / CAMBIO_ESTIMADO
+  const custoTotalYuan = Number(watchCustoCompraYuan) + Number(watchFreteYuan)
+  const custoEstimadoBrl = calcularCustoEstimadoProdutoBrl(
+    Number(watchCustoCompraYuan),
+    Number(watchFreteYuan),
+    cambioAtual,
+  )
 
   // ── Handlers ──────────────────────────────────────────────────────
 
   const handleCreateProduto = () => {
-    reset({ nome: '', categoria: undefined, pesoGramas: undefined, custoYuan: undefined, freteVendedorYuan: 0, descricao: '' })
+    reset({
+      nome: '',
+      categoria: undefined,
+      pesoGramas: undefined,
+      custoYuan: undefined,
+      custoCompraYuan: undefined,
+      freteVendedorYuan: 0,
+      descricao: '',
+    })
     setApiError('')
     setIsCreateModalOpen(true)
   }
@@ -157,6 +190,7 @@ export default function ProdutosPage() {
       categoria: (produto.categoria as Categoria) ?? undefined,
       pesoGramas: produto.pesoGramas ?? 0,
       custoYuan: produto.custoYuan ?? 0,
+      custoCompraYuan: produto.custoCompraYuan ?? produto.custoYuan ?? 0,
       freteVendedorYuan: produto.freteVendedorYuan ?? 0,
       descricao: produto.descricao ?? '',
     })
@@ -184,6 +218,7 @@ export default function ProdutosPage() {
         categoria: formData.categoria,
         pesoGramas: formData.pesoGramas,
         custoYuan: formData.custoYuan,
+        custoCompraYuan: formData.custoCompraYuan,
         freteVendedorYuan: formData.freteVendedorYuan ?? 0,
         descricao: formData.descricao || undefined,
       },
@@ -207,6 +242,7 @@ export default function ProdutosPage() {
           categoria: formData.categoria,
           pesoGramas: formData.pesoGramas,
           custoYuan: formData.custoYuan,
+          custoCompraYuan: formData.custoCompraYuan,
           freteVendedorYuan: formData.freteVendedorYuan ?? 0,
           descricao: formData.descricao || undefined,
         },
@@ -253,33 +289,47 @@ export default function ProdutosPage() {
         {errors.nome && <p className="text-red-500 text-xs mt-1">{errors.nome.message}</p>}
       </div>
 
-      <div>
-        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
-          Categoria <span className="text-red-500">*</span>
-        </label>
-        <Controller
-          control={control}
-          name="categoria"
-          render={({ field }) => (
-            <Select value={field.value ?? ''} onValueChange={field.onChange}>
-              <SelectTrigger className="w-full h-10">
-                <SelectValue placeholder="Selecione uma categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ROUPAS">👕 Roupas</SelectItem>
-                <SelectItem value="TENIS">👟 Tênis</SelectItem>
-                <SelectItem value="ELETRONICO">💻 Eletrônico</SelectItem>
-                <SelectItem value="OUTROS">📦 Outros</SelectItem>
-              </SelectContent>
-            </Select>
+      <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_220px] gap-3 items-end">
+        <div>
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+            Categoria <span className="text-red-500">*</span>
+          </label>
+          <Controller
+            control={control}
+            name="categoria"
+            render={({ field }) => (
+              <Select value={field.value ?? ''} onValueChange={field.onChange}>
+                <SelectTrigger className="w-full h-10">
+                  <SelectValue placeholder="Selecione uma categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ROUPAS">👕 Roupas</SelectItem>
+                  <SelectItem value="TENIS">👟 Tênis</SelectItem>
+                  <SelectItem value="ELETRONICO">💻 Eletrônico</SelectItem>
+                  <SelectItem value="OUTROS">📦 Outros</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          />
+          {errors.categoria && (
+            <p className="text-red-500 text-xs mt-1">{errors.categoria.message}</p>
           )}
-        />
-        {errors.categoria && (
-          <p className="text-red-500 text-xs mt-1">{errors.categoria.message}</p>
-        )}
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+            Moeda de compra
+          </label>
+          <div className="h-10 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex items-center justify-between gap-2">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Yuan (¥)</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+              R$1 = ¥{cambioAtual.toFixed(2)}
+            </span>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
             Peso em gramas <span className="text-red-500">*</span>
@@ -299,7 +349,7 @@ export default function ProdutosPage() {
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
             Custo em Yuan <span className="text-red-500">*</span>
           </label>
-          <div className="flex">
+          <div className="flex w-full">
             <span className="inline-flex items-center px-3 bg-gray-50 dark:bg-gray-800 border border-r-0 border-gray-200 dark:border-gray-700 rounded-l-lg text-gray-500 text-sm">
               ¥
             </span>
@@ -307,7 +357,7 @@ export default function ProdutosPage() {
               type="number"
               step="0.01"
               {...register('custoYuan')}
-              className="flex-1 h-10 px-3 border border-gray-200 dark:border-gray-700 rounded-r-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="min-w-0 flex-1 h-10 px-3 border border-gray-200 dark:border-gray-700 rounded-r-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="0,00"
             />
           </div>
@@ -319,9 +369,30 @@ export default function ProdutosPage() {
 
       <div>
         <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+          Custo de compra (¥) <span className="text-red-500">*</span>
+        </label>
+        <div className="flex w-full">
+          <span className="inline-flex items-center px-3 bg-gray-50 dark:bg-gray-800 border border-r-0 border-gray-200 dark:border-gray-700 rounded-l-lg text-gray-500 text-sm">
+            ¥
+          </span>
+          <input
+            type="number"
+            step="0.01"
+            {...register('custoCompraYuan')}
+            className="min-w-0 flex-1 h-10 px-3 border border-gray-200 dark:border-gray-700 rounded-r-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="0,00"
+          />
+        </div>
+        {errors.custoCompraYuan && (
+          <p className="text-red-500 text-xs mt-1">{errors.custoCompraYuan.message}</p>
+        )}
+      </div>
+
+      <div>
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
           Frete vendedor → armazém
         </label>
-        <div className="flex">
+        <div className="flex w-full">
           <span className="inline-flex items-center px-3 bg-gray-50 dark:bg-gray-800 border border-r-0 border-gray-200 dark:border-gray-700 rounded-l-lg text-gray-500 text-sm">
             ¥
           </span>
@@ -329,7 +400,7 @@ export default function ProdutosPage() {
             type="number"
             step="0.01"
             {...register('freteVendedorYuan')}
-            className="flex-1 h-10 px-3 border border-gray-200 dark:border-gray-700 rounded-r-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="min-w-0 flex-1 h-10 px-3 border border-gray-200 dark:border-gray-700 rounded-r-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="0,00"
           />
         </div>
@@ -352,9 +423,6 @@ export default function ProdutosPage() {
         <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3 border border-blue-200 dark:border-blue-900">
           <p className="text-sm text-blue-700 dark:text-blue-400 font-medium">
             Custo estimado: R$ {custoEstimadoBrl.toFixed(2)}
-          </p>
-          <p className="text-xs text-blue-400 dark:text-blue-500 mt-1">
-            (câmbio estimado: R$1 = ¥{CAMBIO_ESTIMADO.toFixed(2)})
           </p>
         </div>
       )}
@@ -402,13 +470,7 @@ export default function ProdutosPage() {
       {list.length === 0 ? (
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-12 text-center">
           <ShoppingBag className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-gray-400 mb-4">Nenhum produto cadastrado</p>
-          <Button
-            onClick={handleCreateProduto}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            Adicionar produto
-          </Button>
+          <p className="text-gray-500 dark:text-gray-400">Nenhum produto cadastrado</p>
         </div>
       ) : (
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm overflow-hidden">
@@ -426,9 +488,11 @@ export default function ProdutosPage() {
               </TableHeader>
               <TableBody>
                 {list.map((produto) => {
-                  const custoTotal =
-                    (produto.custoYuan ?? 0) + (produto.freteVendedorYuan ?? 0)
-                  const custoEstBrl = custoTotal / CAMBIO_ESTIMADO
+                  const custoEstBrl = calcularCustoEstimadoProdutoBrl(
+                    produto.custoCompraYuan ?? produto.custoYuan ?? 0,
+                    produto.freteVendedorYuan ?? 0,
+                    cambioAtual,
+                  )
                   return (
                     <TableRow
                       key={produto.id}
@@ -436,7 +500,7 @@ export default function ProdutosPage() {
                     >
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
+                          <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
                             <Package className="w-5 h-5 text-gray-400" />
                           </div>
                           <div>

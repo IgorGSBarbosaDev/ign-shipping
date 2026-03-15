@@ -72,6 +72,9 @@ public class ProdutoService {
         if (produto.getFreteVendedorYuan() == null) {
             produto.setFreteVendedorYuan(BigDecimal.ZERO);
         }
+        if (produto.getCustoCompraYuan() == null) {
+            produto.setCustoCompraYuan(produto.getCustoYuan());
+        }
 
         produto = produtoRepository.save(produto);
         return produtoMapper.toResponse(produto);
@@ -84,6 +87,9 @@ public class ProdutoService {
 
         if (produto.getFreteVendedorYuan() == null) {
             produto.setFreteVendedorYuan(BigDecimal.ZERO);
+        }
+        if (produto.getCustoCompraYuan() == null) {
+            produto.setCustoCompraYuan(produto.getCustoYuan());
         }
 
         produto = produtoRepository.save(produto);

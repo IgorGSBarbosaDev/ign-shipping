@@ -1680,6 +1680,8 @@ export interface components {
             categoria: components["schemas"]["Categoria"];
             /** Format: double */
             custoYuan: number;
+            /** Format: double */
+            custoCompraYuan: number;
             /**
              * Format: double
              * @default 0
@@ -1697,6 +1699,8 @@ export interface components {
             categoria?: components["schemas"]["Categoria"];
             /** Format: double */
             custoYuan?: number;
+            /** Format: double */
+            custoCompraYuan?: number;
             /** Format: double */
             freteVendedorYuan?: number;
             pesoGramas?: number;

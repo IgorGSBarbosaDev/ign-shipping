@@ -66,3 +66,19 @@ export function formatDateTime(date: string | Date): string {
     minute: '2-digit',
   }).format(d)
 }
+
+export function converterYuanParaBrl(valorYuan: number, cambio: number): number {
+  const valorSeguro = Number.isFinite(valorYuan) ? valorYuan : 0
+  const cambioSeguro = Number.isFinite(cambio) && cambio > 0 ? cambio : 1
+  return valorSeguro / cambioSeguro
+}
+
+export function calcularCustoEstimadoProdutoBrl(
+  custoCompraYuan: number,
+  freteVendedorYuan: number,
+  cambio: number,
+): number {
+  const custoCompra = Number.isFinite(custoCompraYuan) ? custoCompraYuan : 0
+  const frete = Number.isFinite(freteVendedorYuan) ? freteVendedorYuan : 0
+  return converterYuanParaBrl(custoCompra + frete, cambio)
+}

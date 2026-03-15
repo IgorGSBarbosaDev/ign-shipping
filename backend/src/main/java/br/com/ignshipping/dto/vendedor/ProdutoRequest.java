@@ -17,6 +17,10 @@ public record ProdutoRequest(
         @DecimalMin(value = "0.01", message = "Custo deve ser maior que zero")
         BigDecimal custoYuan,
 
+        @NotNull(message = "Custo de compra em yuan é obrigatório")
+        @DecimalMin(value = "0", message = "Custo de compra não pode ser negativo")
+        BigDecimal custoCompraYuan,
+
         @DecimalMin(value = "0", message = "Frete do vendedor não pode ser negativo")
         BigDecimal freteVendedorYuan,
 
